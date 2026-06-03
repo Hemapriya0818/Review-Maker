@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Review Maker AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ─── RESET & ROOT ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e28;
+  --card: #181c26;
+  --card2: #1f2433;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --gold: #c9a96e;
+  --gold2: #e8c882;
+  --gold-dim: rgba(201,169,110,0.15);
+  --gold-glow: rgba(201,169,110,0.08);
+  --text: #e8e8f0;
+  --text2: #9299aa;
+  --text3: #5a6175;
+  --accent: #7b9cff;
+  --accent2: #a78bfa;
+  --green: #5ecfa0;
+  --red: #f07070;
+  --shadow: 0 8px 40px rgba(0,0,0,0.5);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --transition: 0.28s cubic-bezier(0.4,0,0.2,1);
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --nav-h: 72px;
+}
+[data-theme="light"] {
+  --bg: #f4f2ee;
+  --bg2: #ece9e2;
+  --bg3: #e4e0d6;
+  --card: #fafaf7;
+  --card2: #f0ede6;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.13);
+  --text: #1a1a2e;
+  --text2: #5a5a72;
+  --text3: #9090aa;
+  --shadow: 0 8px 40px rgba(0,0,0,0.12);
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+@keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+@keyframes scaleIn { from { transform:scale(0.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+@keyframes ripple { to { transform:scale(2.5); opacity:0; } }
+@keyframes dotBounce { 0%,80%,100% { transform:scale(0.8); opacity:0.5; } 40% { transform:scale(1.2); opacity:1; } }
+@keyframes goldPulse { 0%,100% { box-shadow:0 0 0 0 rgba(201,169,110,0.4); } 50% { box-shadow:0 0 0 10px rgba(201,169,110,0); } }
+
+/* ─── SCREEN OVERLAY ─── */
+#app-overlay {
+  position:fixed; inset:0; z-index:1000;
+  background: var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+#app-overlay.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+
+/* ─── LOGO ─── */
+.logo-mark {
+  width:64px; height:64px; border-radius:18px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-size:28px; color:#1a1200;
+  font-weight:700; margin-bottom:16px;
+  box-shadow: 0 0 40px rgba(201,169,110,0.3);
+  animation: float 3s ease-in-out infinite;
+}
+.logo-text { font-family:var(--font-display); font-size:28px; font-weight:700; color:var(--text); }
+.logo-text span { color:var(--gold); }
+.logo-sub { font-size:13px; color:var(--text2); margin-top:4px; letter-spacing:0.5px; }
+
+/* ─── ONBOARDING SCREENS ─── */
+.screen { display:none; flex-direction:column; align-items:center; width:100%; max-width:440px; padding:24px; }
+.screen.active { display:flex; animation:scaleIn 0.4s ease; }
+.screen-card {
+  background:var(--card); border:1px solid var(--border2); border-radius:24px;
+  padding:36px 32px; width:100%; box-shadow:var(--shadow);
+  position:relative; overflow:hidden;
+}
+.screen-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.screen-title { font-family:var(--font-display); font-size:24px; font-weight:700; margin-bottom:8px; }
+.screen-sub { font-size:14px; color:var(--text2); margin-bottom:28px; line-height:1.6; }
+
+/* ─── BUTTONS ─── */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:13px 24px; border-radius:12px; border:none; cursor:pointer;
+  font-family:var(--font-body); font-size:15px; font-weight:600;
+  transition:all var(--transition); position:relative; overflow:hidden; text-decoration:none;
+}
+.btn::after {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  background:rgba(255,255,255,0.08); opacity:0; transition:opacity var(--transition);
+}
+.btn:hover::after { opacity:1; }
+.btn:active { transform:scale(0.97); }
+.btn-gold {
+  background:linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+  color:#1a1200; width:100%; margin-top:12px;
+  box-shadow:0 4px 20px rgba(201,169,110,0.25);
+}
+.btn-gold:hover { box-shadow:0 6px 28px rgba(201,169,110,0.4); transform:translateY(-1px); }
+.btn-outline {
+  background:transparent; border:1px solid var(--border2);
+  color:var(--text); width:100%; margin-top:10px;
+}
+.btn-outline:hover { border-color:var(--gold); color:var(--gold); }
+.btn-ghost { background:transparent; color:var(--text2); padding:8px 16px; font-size:14px; }
+.btn-ghost:hover { color:var(--text); }
+.btn-icon {
+  width:40px; height:40px; padding:0; border-radius:10px;
+  background:var(--card2); border:1px solid var(--border);
+  color:var(--text2);
+}
+.btn-icon:hover { color:var(--gold); border-color:var(--gold); }
+
+/* ─── GOOGLE SIGN IN ─── */
+.google-btn {
+  display:flex; align-items:center; gap:12px; padding:14px 20px;
+  background:#fff; border-radius:12px; border:none; cursor:pointer; width:100%;
+  font-family:var(--font-body); font-size:15px; font-weight:500; color:#1a1a1a;
+  box-shadow:0 2px 12px rgba(0,0,0,0.15); transition:all var(--transition);
+  margin-top:16px; position:relative; overflow:hidden;
+}
+.google-btn:hover { box-shadow:0 4px 20px rgba(0,0,0,0.25); transform:translateY(-1px); }
+.google-btn:active { transform:scale(0.98); }
+.google-icon { width:22px; height:22px; flex-shrink:0; }
+
+/* ─── FORM FIELDS ─── */
+.field { margin-bottom:18px; }
+.field label { display:block; font-size:13px; font-weight:500; color:var(--text2); margin-bottom:8px; letter-spacing:0.3px; }
+.field input, .field select {
+  width:100%; padding:12px 16px; border-radius:10px;
+  background:var(--bg2); border:1px solid var(--border);
+  color:var(--text); font-family:var(--font-body); font-size:15px;
+  transition:border-color var(--transition), box-shadow var(--transition); outline:none;
+}
+.field input:focus, .field select:focus {
+  border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,169,110,0.15);
+}
+.field input::placeholder { color:var(--text3); }
+
+/* ─── AVATAR UPLOAD ─── */
+.avatar-upload {
+  width:88px; height:88px; border-radius:50%;
+  border:2px dashed var(--border2); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; cursor:pointer;
+  margin:0 auto 20px; transition:all var(--transition);
+  background:var(--bg2); overflow:hidden; position:relative;
+}
+.avatar-upload:hover { border-color:var(--gold); background:var(--gold-glow); }
+.avatar-upload img { width:100%; height:100%; object-fit:cover; }
+.avatar-upload-hint { font-size:11px; color:var(--text3); margin-top:4px; text-align:center; }
+
+/* ─── MAIN APP ─── */
+#main-app { display:none; min-height:100vh; padding-bottom:calc(var(--nav-h) + 20px); }
+#main-app.visible { display:block; animation:fadeIn 0.4s ease; }
+
+/* ─── TOP BAR ─── */
+.topbar {
+  position:sticky; top:0; z-index:100;
+  background:rgba(13,15,20,0.85); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 20px; height:60px;
+}
+[data-theme="light"] .topbar { background:rgba(244,242,238,0.85); }
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.topbar-logo { font-family:var(--font-display); font-size:18px; font-weight:700; }
+.topbar-logo span { color:var(--gold); }
+.profile-btn {
+  width:38px; height:38px; border-radius:50%; overflow:hidden;
+  border:2px solid var(--gold); cursor:pointer; flex-shrink:0;
+  transition:all var(--transition); position:relative;
+}
+.profile-btn:hover { transform:scale(1.08); box-shadow:0 0 0 4px var(--gold-dim); }
+.profile-btn img { width:100%; height:100%; object-fit:cover; }
+.profile-btn-initials {
+  width:100%; height:100%; background:linear-gradient(135deg,var(--gold),var(--gold2));
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:14px; color:#1a1200;
+}
+.topbar-right { display:flex; align-items:center; gap:10px; }
+.time-display { font-family:var(--font-mono); font-size:12px; color:var(--text2); }
+.conn-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--green);
+  animation:pulse 2s ease-in-out infinite;
+}
+.conn-dot.offline { background:var(--red); }
+
+/* ─── SECTIONS ─── */
+.section { display:none; padding:20px; max-width:680px; margin:0 auto; }
+.section.active { display:block; animation:fadeUp 0.35s ease; }
+
+/* ─── BOTTOM NAV ─── */
+.bottom-nav {
+  position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:24px; padding:10px 8px;
+  display:flex; gap:4px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+  z-index:200; backdrop-filter:blur(20px);
+}
+.nav-btn {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:10px 22px; border-radius:16px; border:none; cursor:pointer;
+  background:transparent; color:var(--text2);
+  font-family:var(--font-body); font-size:11px; font-weight:500;
+  transition:all var(--transition); position:relative;
+}
+.nav-btn .nav-icon { font-size:20px; transition:transform var(--transition); }
+.nav-btn:hover { color:var(--text); }
+.nav-btn:hover .nav-icon { transform:scale(1.15); }
+.nav-btn.active { color:var(--gold); background:var(--gold-glow); }
+.nav-btn.active .nav-icon { transform:scale(1.1); }
+
+/* ─── HOME SECTION ─── */
+.section-header { margin-bottom:24px; }
+.section-header h2 { font-family:var(--font-display); font-size:26px; font-weight:700; }
+.section-header p { font-size:14px; color:var(--text2); margin-top:4px; }
+
+.review-input-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.2);
+  margin-bottom:16px;
+}
+.review-input-card textarea {
+  width:100%; min-height:150px; resize:vertical;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:10px; padding:14px 16px;
+  color:var(--text); font-family:var(--font-body); font-size:15px; line-height:1.7;
+  outline:none; transition:border-color var(--transition), box-shadow var(--transition);
+}
+.review-input-card textarea:focus {
+  border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,169,110,0.12);
+}
+.review-input-card textarea::placeholder { color:var(--text3); }
+.textarea-meta {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top:8px; font-size:12px; color:var(--text3);
+}
+
+/* Presets */
+.presets-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.preset-chip {
+  padding:6px 14px; border-radius:20px; border:1px solid var(--border2);
+  background:var(--card2); color:var(--text2); font-size:13px; cursor:pointer;
+  transition:all var(--transition); white-space:nowrap;
+}
+.preset-chip:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-glow); }
+.preset-chip.active { border-color:var(--gold); color:var(--gold); background:var(--gold-glow); }
+
+/* Instructions */
+.instructions-input {
+  width:100%; padding:11px 16px; border-radius:10px;
+  background:var(--bg2); border:1px solid var(--border);
+  color:var(--text); font-family:var(--font-body); font-size:14px; outline:none;
+  transition:border-color var(--transition);
+}
+.instructions-input:focus { border-color:var(--accent); }
+.instructions-input::placeholder { color:var(--text3); }
+.instructions-row { display:flex; gap:8px; margin-top:12px; }
+.instructions-row .instructions-input { flex:1; }
+
+/* Output card */
+.output-card {
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:var(--radius); padding:20px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.2);
+  display:none; position:relative; overflow:hidden;
+}
+.output-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--gold), var(--accent2), var(--gold));
+}
+.output-card.visible { display:block; animation:fadeUp 0.4s ease; }
+.output-label { font-size:12px; font-weight:600; color:var(--gold); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:12px; }
+.output-text { font-size:15px; line-height:1.8; color:var(--text); white-space:pre-wrap; }
+.output-actions { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+.output-actions .btn { width:auto; margin-top:0; }
+.quality-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--gold-glow); border:1px solid rgba(201,169,110,0.3);
+  border-radius:20px; padding:5px 12px; font-size:13px; color:var(--gold);
+  font-weight:600; margin-top:12px;
+}
+
+/* Loading dots */
+.loading-dots { display:flex; gap:6px; align-items:center; padding:20px 0; }
+.loading-dots span {
+  width:8px; height:8px; border-radius:50%; background:var(--gold);
+  animation:dotBounce 1.2s ease-in-out infinite;
+}
+.loading-dots span:nth-child(2) { animation-delay:0.15s; }
+.loading-dots span:nth-child(3) { animation-delay:0.3s; }
+
+/* ─── HISTORY ─── */
+.history-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:16px; margin-bottom:12px; cursor:pointer;
+  transition:all var(--transition); position:relative; overflow:hidden;
+}
+.history-card:hover { border-color:var(--border2); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+.history-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.history-preview { font-size:14px; color:var(--text2); line-height:1.5; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.history-date { font-size:11px; color:var(--text3); font-family:var(--font-mono); }
+.history-star { font-size:16px; cursor:pointer; transition:transform 0.2s; }
+.history-star:hover { transform:scale(1.3); }
+
+/* ─── SETTINGS ─── */
+.settings-group { margin-bottom:24px; }
+.settings-group-title { font-size:12px; font-weight:600; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+.settings-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius-sm); margin-bottom:8px; cursor:pointer;
+  transition:all var(--transition);
+}
+.settings-item:hover { border-color:var(--border2); }
+.settings-item-left { display:flex; align-items:center; gap:12px; }
+.settings-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+.settings-icon.gold { background:var(--gold-glow); }
+.settings-icon.blue { background:rgba(123,156,255,0.12); }
+.settings-icon.green { background:rgba(94,207,160,0.12); }
+.settings-icon.purple { background:rgba(167,139,250,0.12); }
+.settings-label { font-size:15px; font-weight:500; }
+.settings-sub { font-size:12px; color:var(--text2); margin-top:2px; }
+
+/* Toggle */
+.toggle { position:relative; width:44px; height:24px; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider {
+  position:absolute; inset:0; border-radius:12px;
+  background:var(--bg3); cursor:pointer; transition:background var(--transition);
+}
+.toggle-slider::before {
+  content:''; position:absolute; height:18px; width:18px; border-radius:50%;
+  left:3px; top:3px; background:#fff; transition:transform var(--transition);
+}
+.toggle input:checked + .toggle-slider { background:var(--gold); }
+.toggle input:checked + .toggle-slider::before { transform:translateX(20px); }
+
+/* ─── STATUS ─── */
+.status-card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:20px; margin-bottom:16px;
+}
+.status-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 0; border-bottom:1px solid var(--border);
+}
+.status-row:last-child { border-bottom:none; }
+.status-row-left { display:flex; align-items:center; gap:10px; font-size:14px; }
+.status-badge {
+  padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;
+}
+.status-badge.connected { background:rgba(94,207,160,0.15); color:var(--green); }
+.status-badge.disconnected { background:rgba(240,112,112,0.12); color:var(--red); }
+.status-badge.warning { background:rgba(255,180,50,0.12); color:#ffb432; }
+
+/* ─── PROFILE PAGE ─── */
+.profile-overlay {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(8px);
+  display:none; align-items:flex-end;
+}
+.profile-overlay.open { display:flex; animation:fadeIn 0.3s ease; }
+.profile-sheet {
+  background:var(--card); border-radius:24px 24px 0 0;
+  border-top:1px solid var(--border2);
+  width:100%; max-width:480px; margin:0 auto;
+  padding:24px 24px 40px; animation:fadeUp 0.35s ease;
+  max-height:80vh; overflow-y:auto;
+}
+.profile-header { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+.profile-avatar-lg {
+  width:72px; height:72px; border-radius:50%; overflow:hidden;
+  border:3px solid var(--gold); flex-shrink:0;
+}
+.profile-avatar-lg img { width:100%; height:100%; object-fit:cover; }
+.profile-avatar-initials-lg {
+  width:100%; height:100%; background:linear-gradient(135deg,var(--gold),var(--gold2));
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; font-weight:700; color:#1a1200;
+}
+.profile-name { font-family:var(--font-display); font-size:22px; font-weight:700; }
+.profile-meta { font-size:14px; color:var(--text2); margin-top:4px; }
+.profile-stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:24px; }
+.profile-stat {
+  background:var(--bg2); border-radius:12px; padding:14px;
+  text-align:center; border:1px solid var(--border);
+}
+.profile-stat-val { font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--gold); }
+.profile-stat-lbl { font-size:11px; color:var(--text2); margin-top:4px; }
+.sheet-drag { width:36px; height:4px; border-radius:2px; background:var(--border2); margin:0 auto 20px; }
+
+/* ─── TOAST ─── */
+.toast-container { position:fixed; top:72px; right:16px; z-index:900; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background:var(--card2); border:1px solid var(--border2); border-radius:12px;
+  padding:12px 16px; font-size:14px; max-width:280px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3); animation:fadeUp 0.3s ease;
+  display:flex; align-items:center; gap:8px;
+}
+.toast.success { border-color:rgba(94,207,160,0.3); }
+.toast.error { border-color:rgba(240,112,112,0.3); }
+
+/* ─── API KEY BANNER ─── */
+.api-banner {
+  background:var(--gold-glow); border:1px solid rgba(201,169,110,0.3);
+  border-radius:10px; padding:12px 16px; margin-bottom:16px;
+  font-size:13px; color:var(--gold); display:flex; align-items:center; gap:8px;
+}
+.api-key-field {
+  display:flex; gap:8px; margin-top:8px;
+}
+.api-key-field input {
+  flex:1; padding:10px 14px; border-radius:10px;
+  background:var(--bg2); border:1px solid var(--border);
+  color:var(--text); font-family:var(--font-mono); font-size:13px; outline:none;
+}
+.api-key-field input:focus { border-color:var(--gold); }
+
+/* ─── MISC ─── */
+.divider { height:1px; background:var(--border); margin:20px 0; }
+.chip {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500;
+  background:var(--bg2); border:1px solid var(--border); color:var(--text2);
+}
+.chip.gold { background:var(--gold-glow); border-color:rgba(201,169,110,0.3); color:var(--gold); }
+.empty-state { text-align:center; padding:48px 24px; color:var(--text2); }
+.empty-state .empty-icon { font-size:48px; margin-bottom:12px; }
+.empty-state p { font-size:14px; line-height:1.6; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 480px) {
+  .presets-row { gap:6px; }
+  .preset-chip { font-size:12px; padding:5px 12px; }
+  .section { padding:16px; }
+  .bottom-nav { bottom:10px; }
+  .nav-btn { padding:10px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── APP OVERLAY (Onboarding) ─── -->
+<div id="app-overlay">
+  <div id="screen-splash" class="screen active">
+    <div class="logo-mark">R</div>
+    <div class="logo-text">Review<span>Maker</span></div>
+    <div class="logo-sub">AI-Powered Review Enhancement</div>
+    <br><br>
+    <div style="width:100%;max-width:440px;padding:0 24px;">
+      <div class="screen-card">
+        <div class="screen-title">Welcome</div>
+        <div class="screen-sub">Review Maker uses the Gemini AI API to help you write polished, professional reviews. You'll need a Gemini API key to get started.</div>
+        <button class="btn btn-gold" onclick="showScreen('screen-api')">⚡ Get Started</button>
+        <button class="btn btn-outline" onclick="showScreen('screen-api')" style="margin-top:8px;">I have an API key</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-api" class="screen">
+    <div style="width:100%;max-width:440px;padding:0 24px;">
+      <div class="screen-card">
+        <div class="screen-title">Connect Gemini AI</div>
+        <div class="screen-sub">Paste your Google Gemini API key below. You can get one free at <strong>aistudio.google.com</strong> → Get API Key.</div>
+        <div class="field">
+          <label>Gemini API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="AIza..." autocomplete="off" />
+        </div>
+        <div id="api-error" style="color:var(--red);font-size:13px;margin-top:-8px;margin-bottom:8px;display:none;"></div>
+        <button class="btn btn-gold" onclick="verifyApiKey()">
+          <span id="api-btn-text">Verify & Connect</span>
+        </button>
+        <div style="text-align:center;margin-top:12px;">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size:13px;color:var(--accent);text-decoration:none;">Get a free API key →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-profile" class="screen">
+    <div style="width:100%;max-width:440px;padding:0 24px;">
+      <div class="screen-card">
+        <div class="screen-title">Your Profile</div>
+        <div class="screen-sub">Set up your profile to personalise your Review Maker experience.</div>
+        <div class="avatar-upload" id="avatarUpload" onclick="document.getElementById('avatarFile').click()">
+          <img id="avatarPreview" src="" style="display:none;" />
+          <div id="avatarPlaceholder">
+            <div style="font-size:28px;">📷</div>
+          </div>
+        </div>
+        <div class="avatar-upload-hint">Tap to upload photo (optional)</div>
+        <input type="file" id="avatarFile" accept="image/*" style="display:none;" onchange="handleAvatar(this)" />
+        <div class="field" style="margin-top:16px;">
+          <label>Your Name *</label>
+          <input type="text" id="profileName" placeholder="Enter your name" />
+        </div>
+        <div class="field">
+          <label>Age</label>
+          <input type="number" id="profileAge" placeholder="Your age" min="1" max="120" />
+        </div>
+        <button class="btn btn-gold" onclick="saveProfile()">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN APP ─── -->
+<div id="main-app">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="profile-btn" onclick="openProfile()" id="topProfileBtn">
+        <div class="profile-btn-initials" id="topProfileInitials">?</div>
+      </div>
+      <div class="topbar-logo">Review<span>Maker</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="time-display" id="clockDisplay"></div>
+      <div class="conn-dot" id="connDot" title="Connection status"></div>
+    </div>
+  </div>
+
+  <!-- HOME SECTION -->
+  <div id="sec-home" class="section active">
+    <div class="section-header">
+      <h2>Refine Your Review</h2>
+      <p>Paste, enhance, and polish with Gemini AI</p>
+    </div>
+
+    <!-- API key banner (shown if key missing) -->
+    <div class="api-banner" id="apiKeyBanner" style="display:none;">
+      ⚠️ No API key configured.
+      <button class="btn btn-ghost" style="margin-left:auto;padding:4px 10px;font-size:12px;" onclick="goToSettings()">Settings</button>
+    </div>
+
+    <!-- Writing style presets -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500;">✦ Style Presets</div>
+      <div class="presets-row" id="presetsRow">
+        <div class="preset-chip" data-preset="professional" onclick="selectPreset(this)">Professional</div>
+        <div class="preset-chip" data-preset="emotional" onclick="selectPreset(this)">Emotional</div>
+        <div class="preset-chip" data-preset="casual" onclick="selectPreset(this)">Casual</div>
+        <div class="preset-chip" data-preset="cinematic" onclick="selectPreset(this)">Cinematic</div>
+        <div class="preset-chip" data-preset="concise" onclick="selectPreset(this)">Concise</div>
+        <div class="preset-chip" data-preset="detailed" onclick="selectPreset(this)">Detailed</div>
+      </div>
+    </div>
+
+    <!-- Input card -->
+    <div class="review-input-card">
+      <div style="font-size:12px;color:var(--text2);font-weight:500;margin-bottom:8px;letter-spacing:0.3px;">PASTE YOUR REVIEW</div>
+      <textarea id="reviewInput" placeholder="Write or paste your review here…&#10;&#10;e.g. 'I like this show. The emotional scenes were good and the VFX was good.'" oninput="updateCounts()"></textarea>
+      <div class="textarea-meta">
+        <span id="charCount">0 chars</span>
+        <span id="wordCount">0 words</span>
+      </div>
+    </div>
+
+    <!-- Instructions row -->
+    <div class="instructions-row">
+      <input class="instructions-input" id="instructionsInput" placeholder="Custom instructions… e.g. 'Make it more emotional, avoid commas'" />
+      <button class="btn btn-gold" id="refineBtn" onclick="refineReview()" style="width:auto;white-space:nowrap;margin-top:0;">
+        ✦ Refine
+      </button>
+    </div>
+
+    <!-- Output -->
+    <div class="output-card" id="outputCard" style="margin-top:20px;">
+      <div class="output-label">✦ Enhanced Review</div>
+      <div class="output-text" id="outputText"></div>
+      <div class="quality-badge" id="qualityBadge" style="display:none;">⭐ Quality Score: <span id="qualityScore">—</span>/10</div>
+      <div class="output-actions">
+        <button class="btn btn-outline" style="font-size:13px;" onclick="copyOutput()">📋 Copy</button>
+        <button class="btn btn-outline" style="font-size:13px;" onclick="saveToHistory()">🔖 Save</button>
+        <button class="btn btn-outline" style="font-size:13px;" onclick="exportOutput()">⬇ Export</button>
+        <button class="btn btn-ghost" style="font-size:13px;" onclick="startOver()">🔄 Start Over</button>
+      </div>
+      <!-- Re-refine -->
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Further adjustments?</div>
+        <div class="instructions-row">
+          <input class="instructions-input" id="furtherInput" placeholder="e.g. 'Make it shorter and more punchy'" />
+          <button class="btn btn-gold" onclick="furtherRefine()" style="width:auto;margin-top:0;white-space:nowrap;">Re-Refine</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saved reviews section -->
+    <div style="margin-top:28px;" id="historySection">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:15px;font-weight:600;">📚 Recent Reviews</div>
+        <button class="btn btn-ghost" style="font-size:13px;" onclick="clearHistory()">Clear all</button>
+      </div>
+      <div id="historyList">
+        <div class="empty-state">
+          <div class="empty-icon">✍️</div>
+          <p>Your refined reviews will appear here.<br>Start by refining your first review!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS SECTION -->
+  <div id="sec-settings" class="section">
+    <div class="section-header">
+      <h2>Settings</h2>
+      <p>Customise your Review Maker experience</p>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">API & Connection</div>
+      <div class="settings-item" onclick="editApiKey()">
+        <div class="settings-item-left">
+          <div class="settings-icon gold">🔑</div>
+          <div>
+            <div class="settings-label">Gemini API Key</div>
+            <div class="settings-sub" id="apiKeyDisplay">Not configured</div>
+          </div>
+        </div>
+        <span style="color:var(--text3);">›</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Appearance</div>
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <div class="settings-icon blue">🌙</div>
+          <div>
+            <div class="settings-label">Dark Mode</div>
+            <div class="settings-sub">Use dark theme</div>
+          </div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="darkModeToggle" checked onchange="toggleTheme(this)" /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <div class="settings-icon purple">✨</div>
+          <div>
+            <div class="settings-label">Animations</div>
+            <div class="settings-sub">Enable smooth transitions</div>
+          </div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="animToggle" checked onchange="toggleAnim(this)" /><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Profile</div>
+      <div class="settings-item" onclick="openProfile()">
+        <div class="settings-item-left">
+          <div class="settings-icon gold">👤</div>
+          <div>
+            <div class="settings-label">Edit Profile</div>
+            <div class="settings-sub" id="settingsProfileName">—</div>
+          </div>
+        </div>
+        <span style="color:var(--text3);">›</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Data</div>
+      <div class="settings-item" onclick="clearHistory()">
+        <div class="settings-item-left">
+          <div class="settings-icon" style="background:rgba(240,112,112,0.1);">🗑️</div>
+          <div>
+            <div class="settings-label">Clear Review History</div>
+            <div class="settings-sub">Remove all saved reviews</div>
+          </div>
+        </div>
+        <span style="color:var(--text3);">›</span>
+      </div>
+      <div class="settings-item" onclick="exportAll()">
+        <div class="settings-item-left">
+          <div class="settings-icon green">📤</div>
+          <div>
+            <div class="settings-label">Export All Reviews</div>
+            <div class="settings-sub">Download as text file</div>
+          </div>
+        </div>
+        <span style="color:var(--text3);">›</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">About</div>
+      <div class="settings-item" style="cursor:default;">
+        <div class="settings-item-left">
+          <div class="settings-icon blue">ℹ️</div>
+          <div>
+            <div class="settings-label">Review Maker AI</div>
+            <div class="settings-sub">Version 0.0.1 · Built with Gemini</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS SECTION -->
+  <div id="sec-status" class="section">
+    <div class="section-header">
+      <h2>Status</h2>
+      <p>Connection and account information</p>
+    </div>
+
+    <div class="status-card">
+      <div class="status-row">
+        <div class="status-row-left">🌐 Internet Connection</div>
+        <div class="status-badge connected" id="st-internet">Connected</div>
+      </div>
+      <div class="status-row">
+        <div class="status-row-left">🤖 Gemini AI</div>
+        <div class="status-badge" id="st-gemini">Checking…</div>
+      </div>
+      <div class="status-row">
+        <div class="status-row-left">👤 Profile</div>
+        <div class="status-badge connected" id="st-profile">Active</div>
+      </div>
+    </div>
+
+    <div class="status-card">
+      <div class="status-row">
+        <div class="status-row-left">🕐 Local Time</div>
+        <div style="font-family:var(--font-mono);font-size:13px;" id="st-time">—</div>
+      </div>
+      <div class="status-row">
+        <div class="status-row-left">📅 Timezone</div>
+        <div style="font-size:13px;color:var(--text2);" id="st-tz">—</div>
+      </div>
+      <div class="status-row">
+        <div class="status-row-left">📝 Reviews Refined</div>
+        <div style="font-size:15px;font-weight:600;color:var(--gold);" id="st-count">0</div>
+      </div>
+      <div class="status-row">
+        <div class="status-row-left">💾 Saved Reviews</div>
+        <div style="font-size:15px;font-weight:600;color:var(--accent);" id="st-saved">0</div>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;text-align:center;">
+      <div class="chip">App Version V.000.1</div>
+      <div class="chip" style="margin-left:8px;">Powered by Gemini</div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="navigate('home',this)" id="nav-home">
+      <span class="nav-icon">🏠</span>Home
+    </button>
+    <button class="nav-btn" onclick="navigate('settings',this)" id="nav-settings">
+      <span class="nav-icon">⚙️</span>Settings
+    </button>
+    <button class="nav-btn" onclick="navigate('status',this)" id="nav-status">
+      <span class="nav-icon">📡</span>Status
+    </button>
+  </nav>
+</div>
+
+<!-- Profile Sheet -->
+<div class="profile-overlay" id="profileOverlay" onclick="closeProfile(event)">
+  <div class="profile-sheet">
+    <div class="sheet-drag"></div>
+    <div class="profile-header">
+      <div class="profile-avatar-lg" id="profileAvatarLg">
+        <div class="profile-avatar-initials-lg" id="profileInitialsLg">?</div>
+      </div>
+      <div>
+        <div class="profile-name" id="profileNameDisplay">—</div>
+        <div class="profile-meta" id="profileMetaDisplay">—</div>
+      </div>
+    </div>
+    <div class="profile-stat-row">
+      <div class="profile-stat">
+        <div class="profile-stat-val" id="pstat-refined">0</div>
+        <div class="profile-stat-lbl">Refined</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val" id="pstat-saved">0</div>
+        <div class="profile-stat-lbl">Saved</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val" id="pstat-streak">1</div>
+        <div class="profile-stat-lbl">Day Streak</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="status-row" style="border:none;padding:8px 0;">
+      <div class="status-row-left" style="font-size:14px;">🤖 Gemini Connection</div>
+      <div class="status-badge connected" id="profile-gemini-st">Connected</div>
+    </div>
+    <div class="status-row" style="border:none;padding:8px 0;">
+      <div class="status-row-left" style="font-size:14px;">📱 App Version</div>
+      <div style="font-size:13px;color:var(--text2);">V.000.1</div>
+    </div>
+    <button class="btn btn-outline" style="margin-top:16px;" onclick="closeProfileSheet()">Close</button>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- API Key Modal -->
+<div id="apiModal" style="position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:28px;width:100%;max-width:420px;box-shadow:var(--shadow);">
+    <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-bottom:8px;">Update API Key</div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">Enter your Gemini API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a></div>
+    <div class="field">
+      <input type="password" id="modalApiKey" placeholder="AIza..." style="width:100%;padding:12px 16px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:14px;outline:none;" />
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn btn-gold" style="flex:1;" onclick="saveModalApiKey()">Save Key</button>
+      <button class="btn btn-outline" style="flex:1;margin-top:0;" onclick="closeApiModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  apiKey: localStorage.getItem('rm_apikey') || '',
+  profile: JSON.parse(localStorage.getItem('rm_profile') || 'null'),
+  history: JSON.parse(localStorage.getItem('rm_history') || '[]'),
+  refinedCount: parseInt(localStorage.getItem('rm_refined_count') || '0'),
+  currentOutput: '',
+  selectedPreset: '',
+  onboarded: localStorage.getItem('rm_onboarded') === '1',
+};
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  startClock();
+  monitorConnection();
+
+  if (state.onboarded && state.profile && state.apiKey) {
+    launchApp();
+  } else {
+    showScreen(state.apiKey ? 'screen-profile' : 'screen-splash');
+  }
+});
+
+function launchApp() {
+  document.getElementById('app-overlay').classList.add('hidden');
+  const app = document.getElementById('main-app');
+  app.style.display = 'block';
+  setTimeout(() => app.classList.add('visible'), 50);
+  applyProfileUI();
+  renderHistory();
+  updateStatusPage();
+  updateApiKeyDisplay();
+}
+
+// ═══════════════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+// API VERIFICATION
+// ═══════════════════════════════════════════════════════
+async function verifyApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { showApiError('Please enter your Gemini API key.'); return; }
+  const btn = document.getElementById('api-btn-text');
+  btn.textContent = 'Verifying…';
+  document.querySelector('#screen-api .btn-gold').disabled = true;
+
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[{text:'Reply with the single word: OK'}]}] })
+    });
+    if (r.status === 400 || r.status === 200) {
+      const d = await r.json();
+      const ok = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toLowerCase().includes('ok') || r.status === 200;
+      if (ok || d.candidates) {
+        state.apiKey = key;
+        localStorage.setItem('rm_apikey', key);
+        showScreen(state.profile ? 'screen-done' : 'screen-profile');
+        if (state.profile) { state.onboarded = true; localStorage.setItem('rm_onboarded','1'); launchApp(); }
+      } else { showApiError('Could not verify key. Please check and try again.'); }
+    } else if (r.status === 401 || r.status === 403) {
+      showApiError('Invalid API key. Please check and try again.');
+    } else {
+      showApiError('Network error. Please try again.');
+    }
+  } catch(e) {
+    showApiError('Network error. Check your connection.');
+  }
+  btn.textContent = 'Verify & Connect';
+  document.querySelector('#screen-api .btn-gold').disabled = false;
+}
+
+function showApiError(msg) {
+  const el = document.getElementById('api-error');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display='none', 4000);
+}
+
+// ═══════════════════════════════════════════════════════
+// AVATAR & PROFILE
+// ═══════════════════════════════════════════════════════
+function handleAvatar(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('avatarPreview');
+    img.src = e.target.result; img.style.display = 'block';
+    document.getElementById('avatarPlaceholder').style.display = 'none';
+    state.avatarDataUrl = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function saveProfile() {
+  const name = document.getElementById('profileName').value.trim();
+  const age = document.getElementById('profileAge').value;
+  if (!name) { showToast('Please enter your name.','error'); return; }
+  state.profile = { name, age: age || '—', avatar: state.avatarDataUrl || null, joined: new Date().toLocaleDateString() };
+  localStorage.setItem('rm_profile', JSON.stringify(state.profile));
+  state.onboarded = true;
+  localStorage.setItem('rm_onboarded','1');
+  showToast('Profile created! Welcome, ' + name + '!','success');
+  launchApp();
+}
+
+function applyProfileUI() {
+  const p = state.profile;
+  if (!p) return;
+  const initials = p.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+
+  // Topbar
+  const topBtn = document.getElementById('topProfileBtn');
+  if (p.avatar) {
+    topBtn.innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+  } else {
+    document.getElementById('topProfileInitials').textContent = initials;
+  }
+
+  // Profile sheet
+  document.getElementById('profileNameDisplay').textContent = p.name;
+  document.getElementById('profileMetaDisplay').textContent = `Age ${p.age} · Member since ${p.joined}`;
+  const lgl = document.getElementById('profileInitialsLg');
+  if (p.avatar) {
+    document.getElementById('profileAvatarLg').innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;" />`;
+  } else {
+    lgl.textContent = initials;
+  }
+  document.getElementById('settingsProfileName').textContent = p.name;
+}
+
+function openProfile() {
+  updateProfileStats();
+  document.getElementById('profileOverlay').classList.add('open');
+}
+function closeProfile(e) {
+  if (e.target === document.getElementById('profileOverlay')) closeProfileSheet();
+}
+function closeProfileSheet() {
+  document.getElementById('profileOverlay').classList.remove('open');
+}
+function updateProfileStats() {
+  document.getElementById('pstat-refined').textContent = state.refinedCount;
+  document.getElementById('pstat-saved').textContent = state.history.length;
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function navigate(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (name === 'status') updateStatusPage();
+}
+function goToSettings() {
+  navigate('settings', document.getElementById('nav-settings'));
+}
+
+// ═══════════════════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════════════════
+const PRESETS = {
+  professional: 'Rewrite this review in a formal, professional, and authoritative tone. Use precise vocabulary.',
+  emotional: 'Rewrite this review to be deeply emotional, heartfelt, and touching. Evoke strong feelings.',
+  casual: 'Rewrite this review in a relaxed, conversational, friendly tone — like talking to a friend.',
+  cinematic: 'Rewrite this review as if written by a film critic for a prestigious magazine. Dramatic and poetic.',
+  concise: 'Rewrite this review to be very concise and punchy. Maximum impact, minimum words.',
+  detailed: 'Rewrite this review with rich detail, vivid descriptions, and thorough analysis.',
+};
+let activePresetEl = null;
+function selectPreset(el) {
+  if (activePresetEl) activePresetEl.classList.remove('active');
+  if (activePresetEl === el) { activePresetEl = null; state.selectedPreset = ''; return; }
+  el.classList.add('active');
+  activePresetEl = el;
+  state.selectedPreset = PRESETS[el.dataset.preset] || '';
+}
+
+// ═══════════════════════════════════════════════════════
+// COUNTERS
+// ═══════════════════════════════════════════════════════
+function updateCounts() {
+  const txt = document.getElementById('reviewInput').value;
+  document.getElementById('charCount').textContent = txt.length + ' chars';
+  const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+  document.getElementById('wordCount').textContent = words + ' words';
+}
+
+// ═══════════════════════════════════════════════════════
+// REFINE
+// ═══════════════════════════════════════════════════════
+async function callGemini(prompt) {
+  if (!state.apiKey) { showToast('No API key configured. Go to Settings.','error'); return null; }
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.apiKey}`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }],
+      generationConfig:{ temperature:0.85, maxOutputTokens:1024 }
+    })
+  });
+  if (!r.ok) { const e=await r.json(); throw new Error(e.error?.message||'API Error'); }
+  const d = await r.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function refineReview() {
+  const review = document.getElementById('reviewInput').value.trim();
+  if (!review) { showToast('Please paste a review first.','error'); return; }
+  if (!state.apiKey) { showToast('No API key. Go to Settings.','error'); return; }
+
+  const instructions = document.getElementById('instructionsInput').value.trim();
+  const preset = state.selectedPreset;
+
+  showLoadingOutput();
+
+  const prompt = buildPrompt(review, instructions, preset);
+
+  try {
+    const result = await callGemini(prompt);
+    if (!result) return;
+    state.currentOutput = result;
+    const score = await getQualityScore(review, result);
+    showOutput(result, score);
+    state.refinedCount++;
+    localStorage.setItem('rm_refined_count', state.refinedCount);
+  } catch(e) {
+    showToast('Error: ' + e.message,'error');
+    document.getElementById('outputCard').style.display = 'none';
+  }
+}
+
+async function furtherRefine() {
+  const further = document.getElementById('furtherInput').value.trim();
+  if (!state.currentOutput) { showToast('No output to refine yet.','error'); return; }
+
+  const prompt = `You previously enhanced a review. Here is that enhanced version:\n\n"${state.currentOutput}"\n\nNow, further refine it based on this instruction: ${further || 'Improve it further.'}\n\nReturn only the refined review text.`;
+  showLoadingOutput();
+  try {
+    const result = await callGemini(prompt);
+    if (!result) return;
+    state.currentOutput = result;
+    const score = await getQualityScore('', result);
+    showOutput(result, score);
+    state.refinedCount++;
+    localStorage.setItem('rm_refined_count', state.refinedCount);
+    document.getElementById('furtherInput').value = '';
+    showToast('Review further refined!','success');
+  } catch(e) {
+    showToast('Error: ' + e.message,'error');
+  }
+}
+
+function buildPrompt(review, instructions, preset) {
+  let p = `You are an expert review writer and editor. Your task is to enhance the following review.\n\n`;
+  p += `Original Review:\n"${review}"\n\n`;
+  if (preset) p += `Style Direction: ${preset}\n\n`;
+  if (instructions) p += `Additional Instructions: ${instructions}\n\n`;
+  p += `Please rewrite and enhance this review by:\n- Correcting grammar and spelling\n- Improving sentence structure and flow\n- Adding depth and detail where appropriate\n- Enhancing readability and overall quality\n${instructions ? '- Following the additional instructions above' : ''}\n\nReturn ONLY the enhanced review text. Do not include any preamble, labels, or explanations.`;
+  return p;
+}
+
+async function getQualityScore(original, enhanced) {
+  try {
+    const p = `Rate the quality of this review on a scale of 1 to 10. Consider clarity, depth, engagement, and professional quality. Return ONLY a single integer between 1 and 10.\n\nReview:\n"${enhanced}"`;
+    const r = await callGemini(p);
+    const match = r?.match(/\d+/);
+    return match ? Math.min(10, Math.max(1, parseInt(match[0]))) : null;
+  } catch { return null; }
+}
+
+function showLoadingOutput() {
+  const card = document.getElementById('outputCard');
+  card.classList.add('visible');
+  card.style.display = 'block';
+  document.getElementById('outputText').innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div><div style="font-size:14px;color:var(--text2);">Gemini is enhancing your review…</div>`;
+  document.getElementById('qualityBadge').style.display = 'none';
+}
+
+function showOutput(text, score) {
+  document.getElementById('outputText').textContent = text;
+  if (score !== null) {
+    document.getElementById('qualityScore').textContent = score;
+    document.getElementById('qualityBadge').style.display = 'inline-flex';
+  }
+  showToast('Review refined successfully!','success');
+}
+
+function startOver() {
+  document.getElementById('reviewInput').value = '';
+  document.getElementById('instructionsInput').value = '';
+  document.getElementById('furtherInput').value = '';
+  document.getElementById('outputCard').style.display = 'none';
+  document.getElementById('outputCard').classList.remove('visible');
+  state.currentOutput = '';
+  if (activePresetEl) { activePresetEl.classList.remove('active'); activePresetEl = null; }
+  updateCounts();
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════
+function saveToHistory() {
+  if (!state.currentOutput) return;
+  const entry = {
+    id: Date.now(),
+    original: document.getElementById('reviewInput').value.slice(0,120),
+    enhanced: state.currentOutput,
+    date: new Date().toLocaleString(),
+    starred: false,
+  };
+  state.history.unshift(entry);
+  if (state.history.length > 30) state.history.pop();
+  localStorage.setItem('rm_history', JSON.stringify(state.history));
+  renderHistory();
+  showToast('Saved to history!','success');
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!state.history.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">✍️</div><p>Your refined reviews will appear here.<br>Start by refining your first review!</p></div>`;
+    return;
+  }
+  list.innerHTML = state.history.map(h => `
+    <div class="history-card" onclick="loadHistory('${h.id}')">
+      <div class="history-card-header">
+        <div class="history-date">${h.date}</div>
+        <span class="history-star" onclick="toggleStar(event,'${h.id}')">${h.starred?'⭐':'☆'}</span>
+      </div>
+      <div class="history-preview">${h.enhanced}</div>
+    </div>
+  `).join('');
+  document.getElementById('st-saved').textContent = state.history.length;
+  document.getElementById('pstat-saved').textContent = state.history.length;
+}
+
+function loadHistory(id) {
+  const h = state.history.find(x=>x.id==id);
+  if (!h) return;
+  state.currentOutput = h.enhanced;
+  document.getElementById('outputCard').classList.add('visible');
+  document.getElementById('outputCard').style.display = 'block';
+  document.getElementById('outputText').textContent = h.enhanced;
+  document.getElementById('qualityBadge').style.display = 'none';
+  navigate('home', document.getElementById('nav-home'));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleStar(e, id) {
+  e.stopPropagation();
+  const h = state.history.find(x=>x.id==id);
+  if (h) { h.starred = !h.starred; localStorage.setItem('rm_history',JSON.stringify(state.history)); renderHistory(); }
+}
+
+function clearHistory() {
+  if (!confirm('Clear all saved reviews?')) return;
+  state.history = [];
+  localStorage.setItem('rm_history','[]');
+  renderHistory();
+  showToast('History cleared.','success');
+}
+
+// ═══════════════════════════════════════════════════════
+// COPY / EXPORT
+// ═══════════════════════════════════════════════════════
+function copyOutput() {
+  if (!state.currentOutput) return;
+  navigator.clipboard.writeText(state.currentOutput).then(() => showToast('Copied to clipboard!','success'));
+}
+
+function exportOutput() {
+  if (!state.currentOutput) return;
+  const blob = new Blob([state.currentOutput], {type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'review_' + Date.now() + '.txt'; a.click();
+}
+
+function exportAll() {
+  if (!state.history.length) { showToast('No reviews to export.','error'); return; }
+  const txt = state.history.map((h,i)=>`=== Review ${i+1} — ${h.date} ===\n\n${h.enhanced}\n`).join('\n');
+  const blob = new Blob([txt],{type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'all_reviews_' + Date.now() + '.txt'; a.click();
+  showToast('Reviews exported!','success');
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function toggleTheme(el) {
+  document.documentElement.setAttribute('data-theme', el.checked ? 'dark' : 'light');
+  if (!el.checked) document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('rm_dark', el.checked ? '1':'0');
+}
+function toggleAnim(el) {
+  document.body.style.setProperty('--transition', el.checked ? '0.28s cubic-bezier(0.4,0,0.2,1)' : '0s');
+}
+
+function updateApiKeyDisplay() {
+  const el = document.getElementById('apiKeyDisplay');
+  if (state.apiKey) {
+    el.textContent = 'AIza…' + state.apiKey.slice(-6) + ' (configured)';
+  } else {
+    el.textContent = 'Not configured';
+  }
+}
+
+function editApiKey() {
+  document.getElementById('modalApiKey').value = '';
+  document.getElementById('apiModal').style.display = 'flex';
+}
+function closeApiModal() {
+  document.getElementById('apiModal').style.display = 'none';
+}
+async function saveModalApiKey() {
+  const k = document.getElementById('modalApiKey').value.trim();
+  if (!k) return;
+  state.apiKey = k;
+  localStorage.setItem('rm_apikey', k);
+  updateApiKeyDisplay();
+  closeApiModal();
+  showToast('API key updated!','success');
+  updateStatusPage();
+}
+
+// ═══════════════════════════════════════════════════════
+// STATUS PAGE
+// ═══════════════════════════════════════════════════════
+function updateStatusPage() {
+  const online = navigator.onLine;
+  document.getElementById('st-internet').textContent = online ? 'Connected' : 'Offline';
+  document.getElementById('st-internet').className = 'status-badge ' + (online?'connected':'disconnected');
+
+  const hasKey = !!state.apiKey;
+  document.getElementById('st-gemini').textContent = hasKey ? 'API Key Set' : 'No Key';
+  document.getElementById('st-gemini').className = 'status-badge ' + (hasKey?'connected':'disconnected');
+  document.getElementById('profile-gemini-st').textContent = hasKey ? 'Connected' : 'Not Connected';
+  document.getElementById('profile-gemini-st').className = 'status-badge ' + (hasKey?'connected':'disconnected');
+
+  const now = new Date();
+  document.getElementById('st-time').textContent = now.toLocaleTimeString();
+  document.getElementById('st-tz').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  document.getElementById('st-count').textContent = state.refinedCount;
+  document.getElementById('st-saved').textContent = state.history.length;
+}
+
+// ═══════════════════════════════════════════════════════
+// CLOCK & CONNECTION
+// ═══════════════════════════════════════════════════════
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('clockDisplay').textContent = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    const stTime = document.getElementById('st-time');
+    if (stTime) stTime.textContent = now.toLocaleTimeString();
+  }
+  tick(); setInterval(tick, 1000);
+}
+
+function monitorConnection() {
+  function update() {
+    const dot = document.getElementById('connDot');
+    if (dot) {
+      dot.classList.toggle('offline', !navigator.onLine);
+    }
+    const si = document.getElementById('st-internet');
+    if (si) { si.textContent = navigator.onLine?'Connected':'Offline'; si.className='status-badge '+(navigator.onLine?'connected':'disconnected'); }
+  }
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  update();
+}
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg, type='success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = (type==='success'?'✅':'❌') + ' ' + msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)'; t.style.transition='0.3s'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════
+// LOAD SAVED THEME
+// ═══════════════════════════════════════════════════════
+(function() {
+  if (localStorage.getItem('rm_dark') === '0') {
+    document.documentElement.setAttribute('data-theme','light');
+    const t = document.getElementById('darkModeToggle');
+    if (t) t.checked = false;
+  }
+})();
+</script>
+</body>
+</html>
